@@ -1,0 +1,158 @@
+
+为了确保每个人的总工资在表格中实时计算和显示，我们需要修改之前的代码，使得每当用户输入或修改任何影响总工资的数据时，都会重新计算并更新总工资栏的显示。下面是修改后的代码：
+
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>放射科工资奖金表</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px;
+            text-align: left;
+        }
+        input {
+            width: 60px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>放射科工资奖金表</h1>
+
+<table id="mainTable">
+    <thead>
+        <tr>
+            <th>姓名</th>
+            <th>类型</th>
+            <th>基础工资</th>
+            <th>比例</th>
+            <th>检查项目</th>
+            <th>检查数量</th>
+            <th>单价</th>
+            <th>机动金额</th>
+            <th>总工资</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr id="addRow">
+            <td><input type="text" id="personName" placeholder="姓名"></td>
+            <td>
+                <select id="personType">
+                    <option value="doctor">医生</option>
+                    <option value="technician">技术员</option>
+                </select>
+            </td>
+            <td><input type="number" id="baseSalary" placeholder="基础工资" step="100" min="0"></td>
+            <td><input type="number" id="salaryRatio" value="1" step="0.1" min="0"></td>
+            <td><input type="text" id="examName" placeholder="项目名称"></td>
+            <td><input type="number" id="examCount" placeholder="检查数量" step="1" min="0"></td>
+            <td><input type="number" id="examPrice" placeholder="单价" step="1" min="0"></td>
+            <td><input type="number" id="discretionaryAmount" placeholder="机动金额" step="1" min="0"></td>
+            <td></td>
+            <td><button onclick="addPerson()">添加</button></td>
+        </tr>
+    </tbody>
+</table>
+
+<script>
+    let data = [];
+
+    function addPerson() {
+        const name = document.getElementById('personName').value;
+        const type = document.getElementById('personType').value;
+        const baseSalary = parseFloat(document.getElementById('baseSalary').value) || 0;
+        const salaryRatio = parseFloat(document.getElementById('salaryRatio').value) || 1;
+        const examName = document.getElementById('examName').value;
+        const examCount = parseInt(document.getElementById('examCount').value) || 0;
+        const examPrice = parseFloat(document.getElementById('examPrice').value) || 0;
+        const discretionaryAmount = parseFloat(document.getElementById('discretionaryAmount').value) || 0;
+
+        if (name) {
+            data.push({
+                name, type, baseSalary, salaryRatio, 
+                examinations: [{name: examName, count: examCount, price: examPrice}],
+                discretionaryAmount
+            });
+            updateTable();
+            clearAddRow();
+        }
+    }
+
+    function clearAddRow() {
+        document.getElementById('personName').value = '';
+        document.getElementById('baseSalary').value = '';
+        document.getElementById('salaryRatio').value = '1';
+        document.getElementById('examName').value = '';
+        document.getElementById('examCount').value = '';
+        document.getElementById('examPrice').value = '';
+        document.getElementById('discretionaryAmount').value = '';
+    }
+
+    function updateTable() {
+        let tableBody = document.querySelector('#mainTable tbody');
+        let rows = '';
+        data.forEach((person, index) => {
+            let exam = person.examinations[0];
+            let totalWage = calculateTotalWage(person, exam);
+            rows += `<tr>
+                <td>${person.name}</td>
+                <td>${person.type}</td>
+                <td><input type="number" value="${person.baseSalary}" oninput="updateDataAndRecalculate(this, ${index}, 'baseSalary')"></td>
+                <td><input type="number" value="${person.salaryRatio}" oninput="updateDataAndRecalculate(this, ${index}, 'salaryRatio')"></td>
+                <td><input type="text" value="${exam.name}" oninput="updateDataAndRecalculate(this, ${index}, 'examName')"></td>
+                <td><input type="number" value="${exam.count}" oninput="updateDataAndRecalculate(this, ${index}, 'examCount')"></td>
+                <td><input type="number" value="${exam.price}" oninput="updateDataAndRecalculate(this, ${index}, 'examPrice')"></td>
+                <td><input type="number" value="${person.discretionaryAmount}" oninput="updateDataAndRecalculate(this, ${index}, 'discretionaryAmount')"></td>
+                <td>${totalWage.toFixed(2)}</td>
+                <td><button onclick="removePerson(${index})">删除</button></td>
+            </tr>`;
+        });
+        rows += document.getElementById('addRow').outerHTML; // 保留添加行
+        tableBody.innerHTML = rows;
+    }
+
+    function updateDataAndRecalculate(input, index, key) {
+        let value = input.value;
+        if (key === 'baseSalary' || key === 'salaryRatio' || key === 'examPrice' || key === 'discretionaryAmount') {
+            value = parseFloat(value) || 0;
+        } else if (key === 'examCount') {
+            value = parseInt(value) || 0;
+        }
+
+        if (['baseSalary', 'salaryRatio', 'discretionaryAmount'].includes(key)) {
+            data[index][key] = value;
+        } else if (['examName', 'examCount', 'examPrice'].includes(key)) {
+            data[index].examinations[0][key === 'examName' ? 'name' : key] = value;
+        }
+        updateTable(); // 每次更新数据后重新计算并更新表格
+    }
+
+    function calculateTotalWage(person, exam) {
+        return (person.baseSalary * person.salaryRatio) + (exam.count * exam.price) + person.discretionaryAmount;
+    }
+
+    function removePerson(index) {
+        data.splice(index, 1);
+        updateTable();
+    }
+
+    // 初始数据加载
+    updateTable();
+</script>
+
+</body>
+</html>
+
+在这个修改后的版本中：
+
+每当用户更改任何影响总工资的数据时，updateDataAndRecalculate 函数会更新数据并调用 updateTable 来重新计算和显示总工资。
+calculateTotalWage 函数用于计算每个人的总工资，考虑了基础工资、比例、检查项目的数量和单价，以及机动金额。
+表格的总工资列在每次数据更新时都会重新计算并显示。
